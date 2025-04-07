@@ -1,1 +1,67 @@
 
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract CommodityTrading {
+    struct Commodity {
+        string name;
+        uint256 pricePerUnit;
+        uint256 availableUnits;
+    }
+
+    mapping(uint256 => Commodity) public commodities;
+    mapping(address => mapping(uint256 => uint256)) public userBalances;
+
+    event CommodityPurchased(address indexed buyer, uint256 indexed commodityId, uint256 unitsPurchased, uint256 totalPrice);
+    event CommoditySold(address indexed seller, uint256 indexed commodityId, uint256 unitsSold, uint256 totalPrice);
+
+    function addCommodity(uint256 _commodityId, string memory _name, uint256 _pricePerUnit, uint256 _availableUnits) public {
+        commodities[_commodityId] = Commodity(_name, _pricePerUnit, _availableUnits);
+    }
+
+    function buyCommodity(uint256 _commodityId, uint256 _units) public payable {
+        Commodity storage commodity = commodities[_commodityId];
+        uint256 totalPrice = commodity.pricePerUnit * _units;
+
+        require(commodity.availableUnits >= _units, "Insufficient units");
+        require(msg.value == totalPrice, "Incorrect price");
+
+        commodity.availableUnits -= _units;
+        userBalances[msg.sender][_commodityId] += _units;
+
+        emit CommodityPurchased(msg.sender, _commodityId, _units, totalPrice);
+    }
+
+    function sellCommodity(uint256 _commodityId, uint256 _units) public {
+        Commodity storage commodity = commodities[_commodityId];
+        uint256 totalPrice = commodity.pricePerUnit * _units;
+
+        require(userBalances[msg.sender][_commodityId] >= _units, "Not enough units");
+
+        commodity.availableUnits += _units;
+        userBalances[msg.sender][_commodityId] -= _units;
+
+        payable(msg.sender).transfer(totalPrice);
+
+        emit CommoditySold(msg.sender, _commodityId, _units, totalPrice);
+    }
+
+    function getCommodityBalance(uint256 _commodityId) public view returns (uint256) {
+        return userBalances[msg.sender][_commodityId];
+    }
+
+    function getCommodityDetails(uint256 _commodityId) public view returns (string memory name, uint256 pricePerUnit, uint256 availableUnits) {
+        Commodity storage commodity = commodities[_commodityId];
+        return (commodity.name, commodity.pricePerUnit, commodity.availableUnits);
+    }
+}
+
+pragma solidity >=0.7.10;
+
+contract Hello_World {
+    string greet = "Hello World!";
+
+    function sayHello () public view returns (string memory) {
+        return greet;
+    }
+}
